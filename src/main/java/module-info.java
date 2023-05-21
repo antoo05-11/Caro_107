@@ -5,6 +5,7 @@ module com.example.caro_107 {
 
     requires org.controlsfx.controls;
     requires org.kordamp.bootstrapfx.core;
+    requires java.sql;
     //requires eu.hansolo.tilesfx;
 
     opens com.example.caro_107 to javafx.fxml;
