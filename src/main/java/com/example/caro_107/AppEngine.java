@@ -1,14 +1,18 @@
 package com.example.caro_107;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+
+import static com.example.caro_107.HelloController.runTask;
 
 public class AppEngine extends Application {
     public static SQLConnection sqlConnection;
@@ -18,7 +22,8 @@ public class AppEngine extends Application {
         FXMLLoader fxmlLoader = new FXMLLoader(AppEngine.class.getResource("hello-view.fxml"));
         Scene scene = new Scene(fxmlLoader.load());
         HelloController controller = fxmlLoader.getController();
-        stage.setTitle("Hello!");
+        stage.setTitle("Carooo 107");
+        stage.getIcons().add(new Image(this.getClass().getResource("stageIcon.png").toExternalForm()));
         stage.setScene(scene);
         stage.show();
 
@@ -26,10 +31,16 @@ public class AppEngine extends Application {
         final String password = "MRkPzdU0Jjzpq8HhLWY1";
         final String url = "jdbc:mysql://u2n3pkuyuobnpxzf:MRkPzdU0Jjzpq8HhLWY1@b9z5evsse65g8b1l5vgs-mysql.services.clever-cloud.com:3306/b9z5evsse65g8b1l5vgs";
 
+//        final String user = "root";
+//        final String password = "";
+//        final String url = "jdbc:mysql://localhost:3306/caro";
+
         sqlConnection = new SQLConnection(url, user, password);
         controller.setSQLConnection(sqlConnection);
-        HelloController.runTask(() -> {
+
+        runTask(() -> {
             sqlConnection.connectServer();
+            Platform.runLater(()->{controller.getLoadingLabel().setText("Connecting server...");});
             System.out.println(sqlConnection.getConnection());
             String hashDeviceID = LocalDateTime.now().toString() + Math.random() * 100000000;
             System.out.println(hashDeviceID);
@@ -44,7 +55,7 @@ public class AppEngine extends Application {
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
-        }, null, controller.getProgressIndicator(), null);
+        }, ()->runTask(controller::keepConnection,null,null,null), controller.getLoadingLabel(), null);
     }
 
     public static void main(String[] args) {

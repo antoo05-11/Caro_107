@@ -53,7 +53,11 @@ public class SQLConnection {
                 reconnectingNotification = true;
                 reconnecting = true;
             }
-            addClosingWork();
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
 

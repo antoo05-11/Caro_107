@@ -1,0 +1,18 @@
+@import url("scroll-pane.css");
+
+.left-pane {
+    -fx-border-color: grey;
+    -fx-border-width: 0 1 0 0;
+}
+
+.top-id-label {
+    -fx-font-size: 14;
+    -fx-font-weight: 700;
+    -fx-text-fill: black;
+}
+
+.id-label {
+    -fx-font-size: 15;
+    -fx-font-weight: 700;
+    -fx-text-fill: black;
+}
