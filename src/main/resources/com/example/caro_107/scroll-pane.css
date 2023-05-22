@@ -3,7 +3,7 @@
 }
 
 .scroll-bar:horizontal, .scroll-bar:vertical {
-    -fx-background-color: transparent;
+    -fx-background-color: rgba(128, 128, 128, 0.07);;
 }
 
 .increment-button, .decrement-button {

@@ -1,5 +1,6 @@
 package com.example.caro_107;
 
+import de.jensd.fx.glyphs.fontawesome.FontAwesomeIcon;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -42,9 +43,7 @@ public class AppEngine extends Application {
             Platform.runLater(() -> {
                 controller.getLoadingLabel().setText("Connecting server...");
             });
-            System.out.println(sqlConnection.getConnection());
             String hashDeviceID = LocalDateTime.now().toString() + Math.random() * 100000000;
-            System.out.println(hashDeviceID);
             String query = String.format("insert into temporary_users (deviceID) VALUES ('%s');", hashDeviceID);
             controller.setHashDeviceID(hashDeviceID);
             sqlConnection.updateQuery(query);
@@ -52,7 +51,6 @@ public class AppEngine extends Application {
             ResultSet resultSet = sqlConnection.getDataQuery(query);
             try {
                 if (resultSet.next()) controller.setUserID(resultSet.getInt("userID"));
-                System.out.println(resultSet.getInt("userID"));
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }

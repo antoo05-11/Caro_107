@@ -16,3 +16,24 @@
     -fx-font-weight: 700;
     -fx-text-fill: black;
 }
+.chat-box-scroll-pane .view-port{
+    -fx-background-color: rgba(128, 128, 128, 0.07);
+}
+.chat-box {
+    -fx-background-color: rgba(128, 128, 128, 0.07);
+}
+.chat-box .text-area{
+    -fx-focus-traversable: false;
+    -fx-background-color: transparent;
+}
+.chat-box .text-area .content{
+    -fx-focus-traversable: false;
+    -fx-background-color: transparent;
+}
+.chat-text-field {
+    -fx-background-color: rgba(128, 128, 128, 0.07);
+    -fx-border-color: rgba(128, 128, 128, 0.22);
+}
+.send-button {
+    -fx-background-color: transparent;
+}

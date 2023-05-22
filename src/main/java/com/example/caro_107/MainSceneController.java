@@ -10,22 +10,27 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
 
 import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.ResourceBundle;
 
 public class MainSceneController implements Initializable {
     @FXML
     private ScrollPane mainView;
+    @FXML
+    private ScrollPane boxChatScrollPane;
     @FXML
     private Button playButton;
     @FXML
@@ -40,6 +45,12 @@ public class MainSceneController implements Initializable {
     private Label opponentUsernameLabel;
     @FXML
     private TextField usernameTextField;
+    @FXML
+    private TextField chatTextField;
+    @FXML
+    private VBox chatBox;
+    @FXML
+    private Button sendMessageButton;
     private int userID;
     private int opponentID = -1;
     GridPane caroGridPane = new GridPane();
@@ -79,9 +90,37 @@ public class MainSceneController implements Initializable {
         return icon;
     }
 
+    void displayMessage(String msg) {
+        List<Label> displayMsg = new ArrayList<>();
+        Label msgLabel = new Label();
+        int index = 0;
+        StringBuilder lineMsg = new StringBuilder();
+        for (int i = 0; i < msg.length(); i++) {
+            lineMsg.append(msg.charAt(i));
+            Text msgText = new Text(lineMsg.toString());
+            msgText.setFont(msgLabel.getFont());
+            if (index == msg.length() - 1 || msgText.getBoundsInLocal().getWidth() >= chatBox.getWidth() - 25) {
+                displayMsg.add(new Label(lineMsg.toString()));
+                lineMsg.delete(0, lineMsg.length() - 1);
+            }
+            index++;
+        }
+        Platform.runLater(() -> {
+            for (Label label : displayMsg) {
+                chatBox.getChildren().add(label);
+            }
+            boxChatScrollPane.layout();
+            boxChatScrollPane.setVvalue(boxChatScrollPane.getHmax());
+            chatTextField.setText("");
+        });
+
+    }
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         mainView.setContent(caroGridPane);
+        chatBox.setPrefHeight(boxChatScrollPane.getWidth());
+        sendMessageButton.setDisable(true);
 
         caroView = new StackPane[tableSize][tableSize];
         matchGrid = new int[tableSize][tableSize];
@@ -123,6 +162,27 @@ public class MainSceneController implements Initializable {
             }, loadingLabel, null), loadingLabel, null);
         });
 
+        sendMessageButton.setOnAction(actionEvent -> {
+            if (!Objects.equals(chatTextField.getText(), "") && !sendMessageButton.isDisable()) {
+                String msg = chatTextField.getText();
+                displayMessage("You: " + msg);
+                runTask(() -> {
+                    String query;
+                    if (userID == firstTurnID) {
+                        query = String.format("update matches set messageUser1 = '%s'", msg);
+                    } else query = String.format("update matches set messageUser2 = '%s'", msg);
+                    sqlConnection.updateQuery(query);
+                }, null, null, null);
+                chatTextField.setText("");
+            }
+        });
+
+        chatTextField.setOnKeyPressed(even -> {
+            if (even.getCode() == KeyCode.ENTER) {
+                sendMessageButton.fire();
+            }
+        });
+
         playTurn.addListener((observableValue, oldValue, newValue) -> {
             if (matchID > 0) {
                 if (!newValue) {
@@ -142,10 +202,6 @@ public class MainSceneController implements Initializable {
 
     int turnID;
     int matchID = -1;
-
-
-    String userColor;
-    String opponentColor;
 
     void waitForMatching() {
         Platform.runLater(() -> loadingLabel.setText("Finding opponent..."));
@@ -167,14 +223,11 @@ public class MainSceneController implements Initializable {
                             Platform.runLater(() -> opponentIDLabel.setText(String.valueOf(opponentID)));
                             if (turnID == userID) {
                                 playTurn.setValue(true);
-                                userColor = "red";
-                                opponentColor = "blue";
                             } else {
-                                userColor = "blue";
-                                opponentColor = "red";
                                 runTask(this::waitForTurnAndUpdate, null, loadingLabel, null);
                             }
-
+                            sendMessageButton.setDisable(false);
+                            runTask(this::getMessage, null, null, null);
                             query = "select * from temporary_users where userID = " + opponentID;
                             resultSet = sqlConnection.getDataQuery(query);
                             if (resultSet.next()) {
@@ -238,7 +291,11 @@ public class MainSceneController implements Initializable {
             query = String.format("update temporary_users set status = 'in_lobby', matchID = -1 where userID = %d or userID = %d;", userID, opponentID);
             sqlConnection.updateQuery(query);
 
-            Platform.runLater(() -> resultLabel.setText("VICTORY"));
+            Platform.runLater(() -> {
+                resultLabel.setText("VICTORY");
+                sendMessageButton.setDisable(true);
+            });
+
             timeline.setCycleCount(1);
             timeline.play();
         }
@@ -272,8 +329,8 @@ public class MainSceneController implements Initializable {
                         }
                     }
                 }
-            } catch (Exception ignored) {
-                ignored.printStackTrace();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
             try {
                 Thread.sleep(200);
@@ -315,8 +372,10 @@ public class MainSceneController implements Initializable {
         if (result == RESULT.NONE)
             playTurn.setValue(true);
         else {
-            Platform.runLater(() -> resultLabel.setText("DEFEAT"));
-
+            Platform.runLater(() -> {
+                resultLabel.setText("DEFEAT");
+                sendMessageButton.setDisable(true);
+            });
             timeline.setCycleCount(1);
             timeline.play();
         }
@@ -379,9 +438,42 @@ public class MainSceneController implements Initializable {
     Label onlineNumberLabel;
     @FXML
     Label readyNumberLabel;
+    String opponentMessage = "";
+
+    void getMessage() {
+        if (matchID == -1) {
+            chatBox.getChildren().clear();
+        }
+        while (matchID != -1) {
+            String query;
+            if (userID == firstTurnID) {
+                query = "select messageUser2 from matches where matchID = " + matchID;
+            } else query = "select messageUser1 from matches where matchID = " + matchID;
+            ResultSet resultSet = sqlConnection.getDataQuery(query);
+            try {
+                if (resultSet.next()) {
+                    if (!opponentMessage.equals(resultSet.getString(1))) {
+                        String msg = resultSet.getString(1);
+                        if (opponentUsernameLabel.getText().equals("")) msg = opponentID + ": " + msg;
+                        else msg = opponentUsernameLabel.getText() + ": " + msg;
+                        displayMessage(msg);
+                        opponentMessage = resultSet.getString(1);
+                    }
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
 
     void keepConnection() {
         while (true) {
+
             String query = "select * from\n" +
                     "    (select count(*) from temporary_users where status = 'in_lobby') as t1\n" +
                     "cross join (select count(*) from temporary_users where status = 'find_opponent') as t2;";
@@ -403,7 +495,7 @@ public class MainSceneController implements Initializable {
             try {
                 if (resultSet.next()) {
                     String connectionMessage = resultSet.getString("connectionMessage");
-                    if (connectionMessage != null && !connectionMessage.matches("^.*OK$")){
+                    if (connectionMessage != null && !connectionMessage.matches("^.*OK$")) {
                         connectionMessage += "OK";
                         query = String.format("update temporary_users set connectionMessage = '%s' where userID = %d;",
                                 connectionMessage, userID);
