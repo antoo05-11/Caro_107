@@ -1,10 +1,16 @@
 package com.example.caro_107;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
 import java.sql.*;
+import java.util.Scanner;
 
 public class SQLConnection {
     private Connection connection;
-    private String url;
+    private String server;
+    private String port;
+    private String database;
     private String user;
     private String password;
     private boolean reconnectingNotification;
@@ -28,15 +34,45 @@ public class SQLConnection {
         this.reconnectingNotification = reconnectingNotification;
     }
 
+    public void configure(InputStream configFile, String serverID) {
+            Scanner scanner = new Scanner(configFile);
+            while (scanner.hasNext()) {
+                String line = scanner.nextLine();
+                if (line.contains(serverID)) {
+                    while (scanner.hasNext()) {
+                        line = scanner.nextLine();
+
+                        if (line.contains("}")) break;
+
+                        if (line.contains("user:")) {
+                            user = line.substring(line.indexOf("user:") + 5);
+                        } else if (line.contains("password:")) {
+                            password = line.substring(line.indexOf("password:") + 9);
+                        } else if (line.contains("server:")) {
+                            server = line.substring(line.indexOf("server:") + 7);
+                        } else if (line.contains("database:")) {
+                            database = line.substring(line.indexOf("database:") + 9);
+                        } else if (line.contains("port:")) {
+                            port = line.substring(line.indexOf("port:") + 5);
+                        }
+                    }
+                    break;
+                }
+            }
+
+    }
+
+
+    public String getURL() {
+        return String.format("jdbc:mysql://%s:%s/%s", server, port, database);
+    }
+
     public Connection getConnection() {
         return connection;
     }
 
-    public SQLConnection(String url, String user, String password) {
-        this.url = url;
-        this.user = user;
-        this.password = password;
-        reconnecting = true;
+    public SQLConnection() {
+
     }
 
     /**
@@ -48,8 +84,9 @@ public class SQLConnection {
     public void connectServer() {
         while (connection == null) {
             try {
-                connection = DriverManager.getConnection(url, user, password);
+                connection = DriverManager.getConnection(getURL(), user, password);
             } catch (SQLException e) {
+                e.printStackTrace();
                 reconnectingNotification = true;
                 reconnecting = true;
             }
@@ -59,21 +96,6 @@ public class SQLConnection {
                 throw new RuntimeException(e);
             }
         }
-
-
-//        if (reconnecting) {
-//            reconnecting = false;
-//            reconnectingNotification = false;
-//            while (connection == null) {
-//                try {
-//                    connection = DriverManager.getConnection(url, user, password);
-//                } catch (SQLException e) {
-//                    reconnectingNotification = true;
-//                    reconnecting = true;
-//                }
-//
-//            }
-//        }
     }
 
     /**
@@ -104,21 +126,4 @@ public class SQLConnection {
             e.printStackTrace();
         }
     }
-
-    /**
-     * Close connection to SQL Server.
-     *
-     * @since 1.0
-     */
-    public void addClosingWork() {
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                if (connection != null) connection.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }));
-    }
-
-
 }

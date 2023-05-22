@@ -21,10 +21,9 @@ import javafx.util.Duration;
 import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDateTime;
 import java.util.ResourceBundle;
 
-public class HelloController implements Initializable {
+public class MainSceneController implements Initializable {
     @FXML
     private ScrollPane mainView;
     @FXML
@@ -392,8 +391,8 @@ public class HelloController implements Initializable {
                     int onlineNumber = resultSet.getInt(1);
                     int readyNumber = resultSet.getInt(2);
                     Platform.runLater(() -> {
-                        onlineNumberLabel.setText(String.valueOf(onlineNumber));
-                        readyNumberLabel.setText(String.valueOf(readyNumber));
+                        onlineNumberLabel.setText("Online: " + onlineNumber);
+                        readyNumberLabel.setText("Ready to play: " + readyNumber);
                     });
                 }
             } catch (SQLException e) {
